@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shorif Telecom - User</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <!-- Swiper CSS ব্যানার স্লাইড করার জন্য -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <style>
+        body { background-color: #ffffff; color: #333; font-family: 'Segoe UI', sans-serif; }
+        .pink-glass { background: rgba(255, 182, 193, 0.2); backdrop-filter: blur(10px); border: 1px solid #ffb6c1; border-radius: 15px; }
+        .pink-btn { background: #ff69b4; color: white; border-radius: 20px; transition: 0.3s; box-shadow: 0 4px 10px rgba(255, 105, 180, 0.3); }
+        .pink-btn:hover { background: #ff1493; transform: scale(1.02); }
+        .banner-container { width: 100%; height: 180px; border-radius: 15px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .swiper-slide img { width: 100%; height: 100%; object-fit: cover; }
+    </style>
+</head>
+<body class="p-4 max-w-md mx-auto">
+
+    <!-- Header -->
+    <header class="flex items-center space-x-4 mb-6 p-3 pink-glass">
+        <img id="appLogo" src="https://via.placeholder.com/50" alt="Logo" class="w-12 h-12 rounded-full border-2 border-pink-400">
+        <h1 id="appName" class="text-xl font-bold text-pink-600 uppercase tracking-wide">Loading...</h1>
+    </header>
+
+    <!-- Unlimited Banners (Swiper Slider) -->
+    <div class="swiper mySwiper banner-container">
+        <div class="swiper-wrapper" id="bannerSection">
+            <!-- ব্যানারগুলো এখান থেকে লোড হবে -->
+            <div class="swiper-slide"><img src="https://via.placeholder.com/800x400?text=Loading+Banners..."></div>
+        </div>
+        <!-- স্লাইড ডট -->
+        <div class="swiper-pagination"></div>
+    </div>
+
+    <!-- Search Section -->
+    <div class="mb-8 p-5 pink-glass shadow-sm">
+        <label class="block text-pink-600 font-bold mb-2 text-sm">রিপোর্ট চেক করুন:</label>
+        <input type="number" id="searchNum" placeholder="মোবাইল নাম্বার দিন..." class="w-full p-3 border-2 border-pink-200 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent">
+        <button onclick="searchReport()" class="w-full py-3 pink-btn font-bold">সার্চ করুন</button>
+    </div>
+
+    <!-- Search Result -->
+    <div id="searchResult" class="mb-8"></div>
+
+    <!-- User Report Submission -->
+    <div class="p-5 pink-glass shadow-sm mb-10">
+        <h2 class="font-bold text-pink-600 mb-4 flex items-center">
+            <span class="mr-2">📝</span> নতুন রিপোর্ট জমা দিন
+        </h2>
+        <input type="number" id="uMobile" placeholder="কার নামে রিপোর্ট (নাম্বার)" class="w-full p-3 border rounded-xl mb-3">
+        <textarea id="uMsg" placeholder="ঘটনার বিস্তারিত লিখুন..." rows="3" class="w-full p-3 border rounded-xl mb-3"></textarea>
+        
+        <div id="uPhotoInputs" class="space-y-2">
+            <input type="text" placeholder="প্রমাণ ছবির লিংক (URL)" class="w-full p-2 border rounded-lg u-photo">
+        </div>
+        
+        <button onclick="addPhotoInput('uPhotoInputs', 'u-photo')" class="text-pink-600 text-sm font-bold mt-2 mb-4 block">+ আরও ছবি যোগ করুন</button>
+        
+        <button onclick="submitUserReport()" class="w-full py-3 bg-pink-500 text-white rounded-xl font-bold shadow-md">সাবমিট করুন</button>
+    </div>
+
+    <!-- Swiper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+    <script>
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUHPAvntPpcoZjCLxYVMFFdARz7jXA2Lk",
+            databaseURL: "https://shorif-telicom-default-rtdb.firebaseio.com",
+            projectId: "shorif-telicom",
+            storageBucket: "shorif-telicom.firebasestorage.app"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Initialize Swiper
+        let swiper = new Swiper(".mySwiper", {
+            loop: true,
+            autoplay: { delay: 3000, disableOnInteraction: false },
+            pagination: { el: ".swiper-pagination", clickable: true },
+        });
+
+        // Load App Info
+        db.ref('settings').on('value', snap => {
+            const data = snap.val();
+            if(data) {
+                document.getElementById('appName').innerText = data.name || "Shorif Telecom";
+                document.getElementById('appLogo').src = data.logo || "https://via.placeholder.com/50";
+            }
+        });
+
+        // Load Banners and update Swiper
+        db.ref('banners').on('value', snap => {
+            const container = document.getElementById('bannerSection');
+            container.innerHTML = "";
+            let hasBanners = false;
+
+            snap.forEach(child => {
+                const url = child.val().url;
+                if(url) {
+                    container.innerHTML += `<div class="swiper-slide"><img src="${url}"></div>`;
+                    hasBanners = true;
+                }
+            });
+
+            if(!hasBanners) {
+                container.innerHTML = `<div class="swiper-slide"><img src="https://via.placeholder.com/800x400?text=No+Banners+Available"></div>`;
+            }
+            
+            swiper.update(); // স্লাইডার আপডেট করা
+        });
+
+        function addPhotoInput(divId, className) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'ছবির লিংক (URL)';
+            input.className = `w-full p-2 border rounded-lg u-photo`;
+            document.getElementById(divId).appendChild(input);
+        }
+
+        function searchReport() {
+            const num = document.getElementById('searchNum').value;
+            const resBox = document.getElementById('searchResult');
+            if(!num) return alert("অনুগ্রহ করে নাম্বারটি দিন");
+
+            resBox.innerHTML = `<div class="text-center text-pink-500 font-bold">খোঁজা হচ্ছে...</div>`;
+
+            db.ref('reports/' + num).once('value', snap => {
+                if(snap.exists()){
+                    const data = snap.val();
+                    let images = "";
+                    if(data.photos) data.photos.forEach(p => images += `<img src="${p}" class="w-full mt-3 rounded-lg shadow-sm">`);
+                    
+                    resBox.innerHTML = `
+                    <div class="p-5 pink-glass border-l-8 border-pink-500 animate-fade-in">
+                        <p class="font-bold text-pink-700 text-lg">⚠️ রিপোর্ট পাওয়া গেছে</p>
+                        <hr class="my-2 border-pink-300">
+                        <p class="text-sm text-gray-600 mb-1">টার্গেট নাম্বার: <span class="text-black font-bold">${num}</span></p>
+                        <p class="bg-white/50 p-3 rounded-lg text-gray-800">${data.message}</p>
+                        ${images}
+                    </div>`;
+                } else {
+                    resBox.innerHTML = `
+                    <div class="p-5 pink-glass text-center border-l-8 border-green-400">
+                        <p class="text-green-600 font-bold text-lg">✅ কোনো রিপোর্ট নেই</p>
+                        <p class="text-gray-600 text-sm">এই নাম্বারটি আমাদের ডাটাবেসে নিরাপদ। আপনার লেনদেন শুভ হোক!</p>
+                    </div>`;
+                }
+            });
+        }
+
+        function submitUserReport() {
+            const num = document.getElementById('uMobile').value;
+            const msg = document.getElementById('uMsg').value;
+            const photoElements = document.querySelectorAll('.u-photo');
+            let photos = [];
+            photoElements.forEach(el => { if(el.value) photos.push(el.value); });
+
+            if(!num || !msg) return alert("নাম্বার এবং বিস্তারিত লিখুন");
+
+            db.ref('pending_reports').push({ num, msg, photos, status: 'pending', time: Date.now() })
+            .then(() => {
+                alert("আপনার রিপোর্টটি সফলভাবে এডমিনের কাছে পাঠানো হয়েছে। যাচাইয়ের পর এটি পাবলিশ করা হবে।");
+                document.getElementById('uMobile').value = "";
+                document.getElementById('uMsg').value = "";
+                document.querySelectorAll('.u-photo').forEach(el => el.value = "");
+            });
+        }
+    </script>
+</body>
+</html>
