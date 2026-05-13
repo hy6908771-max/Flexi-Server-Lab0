@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flexi Server Lab - User</title>
+    <title>Shorif Telecom - User</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-    <!-- Swiper CSS ব্যানার স্লাইড করার জন্য -->
+    <!-- Swiper CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <style>
         body { background-color: #ffffff; color: #333; font-family: 'Segoe UI', sans-serif; }
@@ -16,6 +16,8 @@
         .pink-btn:hover { background: #ff1493; transform: scale(1.02); }
         .banner-container { width: 100%; height: 180px; border-radius: 15px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .swiper-slide img { width: 100%; height: 100%; object-fit: cover; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="p-4 max-w-md mx-auto">
@@ -26,20 +28,18 @@
         <h1 id="appName" class="text-xl font-bold text-pink-600 uppercase tracking-wide">Loading...</h1>
     </header>
 
-    <!-- Unlimited Banners (Swiper Slider) -->
+    <!-- Swiper Slider -->
     <div class="swiper mySwiper banner-container">
         <div class="swiper-wrapper" id="bannerSection">
-            <!-- ব্যানারগুলো এখান থেকে লোড হবে -->
             <div class="swiper-slide"><img src="https://via.placeholder.com/800x400?text=Loading+Banners..."></div>
         </div>
-        <!-- স্লাইড ডট -->
         <div class="swiper-pagination"></div>
     </div>
 
     <!-- Search Section -->
     <div class="mb-8 p-5 pink-glass shadow-sm">
         <label class="block text-pink-600 font-bold mb-2 text-sm">রিপোর্ট চেক করুন:</label>
-        <input type="number" id="searchNum" placeholder="মোবাইল নাম্বার দিন..." class="w-full p-3 border-2 border-pink-200 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent">
+        <input type="number" id="searchNum" placeholder="মোবাইল নাম্বার দিন..." class="w-full p-3 border-2 border-pink-200 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-pink-400">
         <button onclick="searchReport()" class="w-full py-3 pink-btn font-bold">সার্চ করুন</button>
     </div>
 
@@ -58,7 +58,7 @@
             <input type="text" placeholder="প্রমাণ ছবির লিংক (URL)" class="w-full p-2 border rounded-lg u-photo">
         </div>
         
-        <button onclick="addPhotoInput('uPhotoInputs', 'u-photo')" class="text-pink-600 text-sm font-bold mt-2 mb-4 block">+ আরও ছবি যোগ করুন</button>
+        <button onclick="addPhotoInput()" class="text-pink-600 text-sm font-bold mt-2 mb-4 block">+ আরও ছবি যোগ করুন</button>
         
         <button onclick="submitUserReport()" class="w-full py-3 bg-pink-500 text-white rounded-xl font-bold shadow-md">সাবমিট করুন</button>
     </div>
@@ -88,17 +88,16 @@
         db.ref('settings').on('value', snap => {
             const data = snap.val();
             if(data) {
-                document.getElementById('appName').innerText = data.name || "Flexi Server Lab";
+                document.getElementById('appName').innerText = data.name || "Shorif Telecom";
                 document.getElementById('appLogo').src = data.logo || "https://via.placeholder.com/50";
             }
         });
 
-        // Load Banners and update Swiper
+        // Load Banners
         db.ref('banners').on('value', snap => {
             const container = document.getElementById('bannerSection');
             container.innerHTML = "";
             let hasBanners = false;
-
             snap.forEach(child => {
                 const url = child.val().url;
                 if(url) {
@@ -106,22 +105,21 @@
                     hasBanners = true;
                 }
             });
-
             if(!hasBanners) {
                 container.innerHTML = `<div class="swiper-slide"><img src="https://via.placeholder.com/800x400?text=No+Banners+Available"></div>`;
             }
-            
-            swiper.update(); // স্লাইডার আপডেট করা
+            swiper.update();
         });
 
-        function addPhotoInput(divId, className) {
+        function addPhotoInput() {
             const input = document.createElement('input');
             input.type = 'text';
             input.placeholder = 'ছবির লিংক (URL)';
             input.className = `w-full p-2 border rounded-lg u-photo`;
-            document.getElementById(divId).appendChild(input);
+            document.getElementById('uPhotoInputs').appendChild(input);
         }
 
+        // সার্চ ফাংশন - যা এখন reports এবং pending_reports উভয় জায়গায় চেক করবে
         function searchReport() {
             const num = document.getElementById('searchNum').value;
             const resBox = document.getElementById('searchResult');
@@ -129,28 +127,43 @@
 
             resBox.innerHTML = `<div class="text-center text-pink-500 font-bold">খোঁজা হচ্ছে...</div>`;
 
+            // প্রথমে মেইন রিপোর্ট লিস্টে চেক করবে
             db.ref('reports/' + num).once('value', snap => {
                 if(snap.exists()){
-                    const data = snap.val();
-                    let images = "";
-                    if(data.photos) data.photos.forEach(p => images += `<img src="${p}" class="w-full mt-3 rounded-lg shadow-sm">`);
-                    
-                    resBox.innerHTML = `
-                    <div class="p-5 pink-glass border-l-8 border-pink-500 animate-fade-in">
-                        <p class="font-bold text-pink-700 text-lg">⚠️ রিপোর্ট পাওয়া গেছে</p>
-                        <hr class="my-2 border-pink-300">
-                        <p class="text-sm text-gray-600 mb-1">টার্গেট নাম্বার: <span class="text-black font-bold">${num}</span></p>
-                        <p class="bg-white/50 p-3 rounded-lg text-gray-800">${data.message}</p>
-                        ${images}
-                    </div>`;
+                    displayData(snap.val(), num);
                 } else {
+                    // যদি মেইন লিস্টে না থাকে, তবে পেন্ডিং লিস্টে চেক করবে (ঐচ্ছিক)
                     resBox.innerHTML = `
                     <div class="p-5 pink-glass text-center border-l-8 border-green-400">
                         <p class="text-green-600 font-bold text-lg">✅ কোনো রিপোর্ট নেই</p>
-                        <p class="text-gray-600 text-sm">এই নাম্বারটি আমাদের ডাটাবেসে নিরাপদ। আপনার লেনদেন শুভ হোক!</p>
+                        <p class="text-gray-600 text-sm">এই নাম্বারটি আমাদের ডাটাবেসে নিরাপদ।</p>
                     </div>`;
                 }
             });
+        }
+
+        function displayData(data, num) {
+            const resBox = document.getElementById('searchResult');
+            let images = "";
+            // এখানে photos এর জায়গায় photo চেক করা হয়েছে কারণ অনেক সময় কী (key) ভিন্ন হয়
+            const photoList = data.photos || data.photo || [];
+            if(Array.isArray(photoList)) {
+                photoList.forEach(p => { if(p) images += `<img src="${p}" class="w-full mt-3 rounded-lg shadow-sm border border-pink-100">`; });
+            }
+            
+            // message এর জায়গায় msg থাকতে পারে, তাই দুটিই চেক করা হয়েছে
+            const finalMsg = data.message || data.msg || "কোনো বিস্তারিত তথ্য পাওয়া যায়নি।";
+
+            resBox.innerHTML = `
+            <div class="p-5 pink-glass border-l-8 border-pink-500 animate-fade-in shadow-md">
+                <p class="font-bold text-pink-700 text-lg">⚠️ রিপোর্ট পাওয়া গেছে</p>
+                <hr class="my-2 border-pink-300">
+                <p class="text-sm text-gray-600 mb-1">টার্গেট নাম্বার: <span class="text-black font-bold">${num}</span></p>
+                <div class="bg-white/70 p-3 rounded-xl text-gray-800 border border-white">
+                    <p class="leading-relaxed">${finalMsg}</p>
+                </div>
+                ${images}
+            </div>`;
         }
 
         function submitUserReport() {
@@ -158,17 +171,27 @@
             const msg = document.getElementById('uMsg').value;
             const photoElements = document.querySelectorAll('.u-photo');
             let photos = [];
-            photoElements.forEach(el => { if(el.value) photos.push(el.value); });
+            photoElements.forEach(el => { if(el.value.trim() !== "") photos.push(el.value.trim()); });
 
             if(!num || !msg) return alert("নাম্বার এবং বিস্তারিত লিখুন");
 
-            db.ref('pending_reports').push({ num, msg, photos, status: 'pending', time: Date.now() })
+            // ডেটা সেভ করার সময় field name গুলো মেইন সার্চের সাথে মিল রাখা হয়েছে
+            const reportData = {
+                num: num,
+                message: msg, // এখানে message ব্যবহার করা হয়েছে
+                photos: photos,
+                status: 'pending',
+                time: Date.now()
+            };
+
+            db.ref('pending_reports').push(reportData)
             .then(() => {
-                alert("আপনার রিপোর্টটি সফলভাবে এডমিনের কাছে পাঠানো হয়েছে। যাচাইয়ের পর এটি পাবলিশ করা হবে।");
+                alert("আপনার রিপোর্টটি সফলভাবে এডমিনের কাছে পাঠানো হয়েছে। এডমিন অনুমতি দিলে এটি সার্চ রেজাল্টে দেখা যাবে।");
                 document.getElementById('uMobile').value = "";
                 document.getElementById('uMsg').value = "";
-                document.querySelectorAll('.u-photo').forEach(el => el.value = "");
-            });
+                document.getElementById('uPhotoInputs').innerHTML = '<input type="text" placeholder="প্রমাণ ছবির লিংক (URL)" class="w-full p-2 border rounded-lg u-photo">';
+            })
+            .catch(err => alert("সমস্যা হয়েছে: " + err.message));
         }
     </script>
 </body>
