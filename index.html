@@ -88,7 +88,7 @@
         db.ref('settings').on('value', snap => {
             const data = snap.val();
             if(data) {
-                document.getElementById('appName').innerText = data.name || "Shorif Telecom";
+                document.getElementById('appName').innerText = data.name || "Flexi Server Lab";
                 document.getElementById('appLogo').src = data.logo || "https://via.placeholder.com/50";
             }
         });
